@@ -1,4 +1,10 @@
-.daily-note-navigation {
+.my-daily-notes-hidden-date-picker {
+  position: fixed !important;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.my-daily-note-navigation {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -9,7 +15,11 @@
   font-size: 0.9em;
 }
 
-.daily-note-navigation a {
+.my-daily-note-navigation-link {
   cursor: pointer;
   text-decoration: none;
+}
+
+.my-daily-note-date-picker-btn {
+  cursor: pointer;
 }

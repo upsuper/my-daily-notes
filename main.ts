@@ -47,7 +47,14 @@ export default class MyDailyNotes extends Plugin {
       id: 'insert-date-picker',
       name: '插入日期（选择）',
       editorCallback: (editor: Editor) => {
-        showDatePickerAtCursor(editor);
+        const cursor = editor.getCursor();
+        const coords = (editor as any).cm.coordsAtPos(editor.posToOffset(cursor));	
+        if (!coords) {
+          return;
+        }
+        showDatePickerAtCursor(coords.left, coords.top, new Date(), (date) => {
+          editor.replaceSelection(`[[${date}]]`);
+        });
       },
     });
 
@@ -112,11 +119,12 @@ export default class MyDailyNotes extends Plugin {
 
   private createNavigationElement(currentDate: Date): HTMLElement {
     const container = document.createElement('div');
-    container.addClass('daily-note-navigation');
+    container.addClass('my-daily-note-navigation');
 
     // Previous day
     const prevDateStr = formatDate(getDate(-1, currentDate));
     const prevLink = document.createElement('a');
+    prevLink.addClass('my-daily-note-navigation-link');
     prevLink.href = prevDateStr;
     prevLink.textContent = `← ${prevDateStr}`;
     prevLink.addEventListener('click', (e) => {
@@ -124,9 +132,22 @@ export default class MyDailyNotes extends Plugin {
       this.app.workspace.openLinkText(prevDateStr, '');
     });
 
+    // Date picker button
+    const datePickerBtn = document.createElement('button');
+    datePickerBtn.textContent = '跳到';
+    datePickerBtn.addClass('my-daily-note-date-picker-btn');
+    datePickerBtn.addClass('clickable-icon');
+    datePickerBtn.addEventListener('click', () => {
+      const { left, top } = datePickerBtn.getBoundingClientRect();
+      showDatePickerAtCursor(left, top, currentDate, (date) => {
+        this.app.workspace.openLinkText(date, '');
+      });
+    });
+
     // Next day
     const nextDateStr = formatDate(getDate(1, currentDate));
     const nextLink = document.createElement('a');
+    nextLink.addClass('my-daily-note-navigation-link');
     nextLink.href = nextDateStr;
     nextLink.textContent = `${nextDateStr} →`;
     nextLink.addEventListener('click', (e) => {
@@ -135,6 +156,7 @@ export default class MyDailyNotes extends Plugin {
     });
 
     container.appendChild(prevLink);
+    container.appendChild(datePickerBtn);
     container.appendChild(nextLink);
 
     return container;
@@ -166,26 +188,23 @@ function formatDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function showDatePickerAtCursor(editor: Editor) {
-  const cursor = editor.getCursor();
-  const coords = (editor as any).cm.coordsAtPos(editor.posToOffset(cursor));	
-  if (!coords) {
-    return;
-  }
-
+function showDatePickerAtCursor(
+  left: number,
+  top: number,
+  date: Date,
+  onSelect: (date: string) => void,
+) {
   const dateInput = document.createElement('input');
+  dateInput.addClass('my-daily-notes-hidden-date-picker');
   dateInput.type = 'date';
-  dateInput.style.position = 'fixed';
-  dateInput.style.left = `${coords.left}px`;
-  dateInput.style.top = `${coords.top}px`;
-  dateInput.style.zIndex = '1000';
-  dateInput.style.opacity = '0';
-  dateInput.style.pointerEvents = 'none';
+  dateInput.style.left = `${left}px`;
+  dateInput.style.top = `${top}px`;
+  dateInput.value = formatDate(date);
 
   const onChange = () => {
     const selectedDate = dateInput.value;
     if (selectedDate) {
-      editor.replaceSelection(`[[${selectedDate}]]`);
+      onSelect(selectedDate);
     }
     cleanup();
   };
@@ -209,4 +228,3 @@ function showDatePickerAtCursor(editor: Editor) {
     cleanup();
   }
 }
-
