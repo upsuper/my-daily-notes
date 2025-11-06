@@ -1,0 +1,15 @@
+.daily-note-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background: var(--background-secondary);
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.daily-note-navigation a {
+  cursor: pointer;
+  text-decoration: none;
+}

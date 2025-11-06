@@ -1,0 +1,10 @@
+{
+	"id": "my-daily-notes",
+	"name": "我的日记",
+	"version": "1.0.0",
+	"minAppVersion": "1.10.2",
+	"description": "我的日记",
+	"author": "Xidorn Quan",
+	"authorUrl": "https://upsuper.org",
+	"isDesktopOnly": false
+}
