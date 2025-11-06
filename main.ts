@@ -1,4 +1,4 @@
-import { Editor, Plugin, EditorPosition, MarkdownView, WorkspaceLeaf } from 'obsidian';
+import { Editor, Plugin, MarkdownView } from 'obsidian';
 
 export default class MyDailyNotes extends Plugin {
   private navigationElements = new Map<MarkdownView, HTMLElement>();
@@ -7,16 +7,16 @@ export default class MyDailyNotes extends Plugin {
     this.addCommand({
       id: 'insert-today',
       name: '插入今天',
-      editorCallback: createInsertDateCallback(),
+      editorCallback: createInsertDateCallback({
+        getDate: () => new Date(),
+      }),
     });
     this.addCommand({
       id: 'insert-yesterday',
       name: '插入昨天',
       editorCallback: createInsertDateCallback({
         name: '昨天',
-        updateDate: (date: Date) => {
-          date.setDate(date.getDate() - 1);
-        },
+        getDate: () => getDate(-1),
       }),
     });
     this.addCommand({
@@ -24,9 +24,23 @@ export default class MyDailyNotes extends Plugin {
       name: '插入明天',
       editorCallback: createInsertDateCallback({
         name: '明天',
-        updateDate: (date: Date) => {
-          date.setDate(date.getDate() + 1);
-        },
+        getDate: () => getDate(1),
+      }),
+    });
+    this.addCommand({
+      id: 'insert-day-before-yesterday',
+      name: '插入前天',
+      editorCallback: createInsertDateCallback({
+        name: '前天',
+        getDate: () => getDate(-2),
+      }),
+    });
+    this.addCommand({
+      id: 'insert-day-after-tomorrow',
+      name: '插入后天',
+      editorCallback: createInsertDateCallback({
+        name: '后天',
+        getDate: () => getDate(2),
       }),
     });
     this.addCommand({
@@ -75,12 +89,11 @@ export default class MyDailyNotes extends Plugin {
       this.navigationElements.delete(view);
     }
 
-    const file = view.file;
-    if (!file) return;
-
     // Check if this is a daily note (YYYY-MM-DD format)
-    const dateMatch = file.basename.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!dateMatch) return;
+    const dateMatch = view.file?.basename.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!dateMatch) {
+      return;
+    }
 
     const [, year, month, day] = dateMatch;
     const currentDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
@@ -102,10 +115,7 @@ export default class MyDailyNotes extends Plugin {
     container.addClass('daily-note-navigation');
 
     // Previous day
-    const prevDate = new Date(currentDate);
-    prevDate.setDate(prevDate.getDate() - 1);
-    const prevDateStr = formatDate(prevDate);
-    
+    const prevDateStr = formatDate(getDate(-1, currentDate));
     const prevLink = document.createElement('a');
     prevLink.href = prevDateStr;
     prevLink.textContent = `← ${prevDateStr}`;
@@ -115,10 +125,7 @@ export default class MyDailyNotes extends Plugin {
     });
 
     // Next day
-    const nextDate = new Date(currentDate);
-    nextDate.setDate(nextDate.getDate() + 1);
-    const nextDateStr = formatDate(nextDate);
-    
+    const nextDateStr = formatDate(getDate(1, currentDate));
     const nextLink = document.createElement('a');
     nextLink.href = nextDateStr;
     nextLink.textContent = `${nextDateStr} →`;
@@ -134,15 +141,20 @@ export default class MyDailyNotes extends Plugin {
   }
 }
 
+function getDate(offset: number, date?: Date): Date {
+  date ??= new Date();
+  const newDate = new Date(date);
+  newDate.setDate(newDate.getDate() + offset);
+  return newDate;
+}
+
 function createInsertDateCallback(opts: {
   name?: string,
-  updateDate?: (date: Date) => void,
-} = {}): (editor: Editor) => void {
-  const { name, updateDate } = opts;
+  getDate: () => Date,
+}): (editor: Editor) => void {
+  const { name, getDate } = opts;
   return (editor: Editor) => {
-    const date = new Date();
-    updateDate?.(date);
-    const formattedDate = formatDate(date);
+    const formattedDate = formatDate(getDate());
     editor.replaceSelection(`[[${formattedDate}${name ? `|${name}` : ''}]]`);
   }
 }
