@@ -1,5 +1,14 @@
 # My Daily Notes
 
+A personal daily notes plugin for Obsidian.
+
+It supports Chinese only currently.
+
+## Features
+
+- Insert today, yesterday, tomorrow, day before yesterday, day after tomorrow, and any date through date picker.
+- Navigate to daily notes in a navigation bar on top of daily note pages.
+
 ## License
 
 Copyright (C) 2025  Xidorn Quan
