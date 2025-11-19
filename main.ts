@@ -1,4 +1,4 @@
-import { Editor, Plugin, MarkdownView } from 'obsidian';
+import { Editor, Plugin, MarkdownView, MarkdownFileInfo } from 'obsidian';
 
 export default class MyDailyNotes extends Plugin {
   private navigationElements = new Map<MarkdownView, HTMLElement>();
@@ -7,16 +7,14 @@ export default class MyDailyNotes extends Plugin {
     this.addCommand({
       id: 'insert-today',
       name: '插入今天',
-      editorCallback: createInsertDateCallback({
-        getDate: () => new Date(),
-      }),
+      editorCallback: createInsertDateCallback({}),
     });
     this.addCommand({
       id: 'insert-yesterday',
       name: '插入昨天',
       editorCallback: createInsertDateCallback({
         name: '昨天',
-        getDate: () => getDate(-1),
+        offset: -1,
       }),
     });
     this.addCommand({
@@ -24,7 +22,7 @@ export default class MyDailyNotes extends Plugin {
       name: '插入明天',
       editorCallback: createInsertDateCallback({
         name: '明天',
-        getDate: () => getDate(1),
+        offset: 1,
       }),
     });
     this.addCommand({
@@ -32,7 +30,7 @@ export default class MyDailyNotes extends Plugin {
       name: '插入前天',
       editorCallback: createInsertDateCallback({
         name: '前天',
-        getDate: () => getDate(-2),
+        offset: -2,
       }),
     });
     this.addCommand({
@@ -40,7 +38,7 @@ export default class MyDailyNotes extends Plugin {
       name: '插入后天',
       editorCallback: createInsertDateCallback({
         name: '后天',
-        getDate: () => getDate(2),
+        offset: 2,
       }),
     });
     this.addCommand({
@@ -172,12 +170,33 @@ function getDate(offset: number, date?: Date): Date {
 
 function createInsertDateCallback(opts: {
   name?: string,
-  getDate: () => Date,
-}): (editor: Editor) => void {
-  const { name, getDate } = opts;
-  return (editor: Editor) => {
-    const formattedDate = formatDate(getDate());
-    editor.replaceSelection(`[[${formattedDate}${name ? `|${name}` : ''}]]`);
+  offset?: number,
+}): (editor: Editor, view: MarkdownView | MarkdownFileInfo) => void {
+  const { name, offset } = opts;
+  return (editor: Editor, view: MarkdownView | MarkdownFileInfo) => {
+    // Check if current file is a daily note
+    const file = view.file;
+    const dateMatch = file?.basename.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    
+    let targetDate: Date;
+    
+    if (dateMatch && offset != null) {
+      // File is a daily note and we have an offset - calculate relative to file's date
+      const [, year, month, day] = dateMatch;
+      const fileDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      targetDate = getDate(offset, fileDate);
+    } else if (offset != null) {
+      // File is not a daily note but we have an offset - calculate relative to today
+      targetDate = getDate(offset);
+    } else {
+      // No offset (today command)
+      targetDate = new Date();
+    }
+
+    const isDailyNote = !!dateMatch;
+    const formattedDate = formatDate(targetDate);
+    const linkText = isDailyNote && name ? `|${name}` : '';
+    editor.replaceSelection(`[[${formattedDate}${linkText}]]`);
   }
 }
 
