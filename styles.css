@@ -23,3 +23,9 @@
 .my-daily-note-date-picker-btn {
   cursor: pointer;
 }
+
+.inline-title[data-day]::after {
+  content: "【" attr(data-day) "】";
+  color: var(--text-faint);
+  font-size: 0.9em;
+}

@@ -94,9 +94,20 @@ export default class MyDailyNotes extends Plugin {
       this.navigationElements.delete(view);
     }
 
+    const contentEl = view.contentEl;
+    const editorEl = contentEl.querySelector('.cm-editor');
+    if (!editorEl) {
+      return;
+    }
+
     // Check if this is a daily note (YYYY-MM-DD format)
     const dateMatch = view.file?.basename.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!dateMatch) {
+      // Not a daily note, remove data-day attribute if present
+      const inlineTitle = editorEl.querySelector('.inline-title');
+      if (inlineTitle) {
+        inlineTitle.removeAttribute('data-day');
+      }
       return;
     }
 
@@ -107,11 +118,18 @@ export default class MyDailyNotes extends Plugin {
     const navElement = this.createNavigationElement(currentDate);
     
     // Insert at the top of the editor
-    const contentEl = view.contentEl;
-    const editorEl = contentEl.querySelector('.cm-editor');
-    if (editorEl) {
-      editorEl.insertBefore(navElement, editorEl.firstChild);
-      this.navigationElements.set(view, navElement);
+    editorEl.insertBefore(navElement, editorEl.firstChild);
+    this.navigationElements.set(view, navElement);
+
+    // Update inline title with relative day
+    const inlineTitle = editorEl.querySelector('.inline-title');
+    if (inlineTitle) {
+      const relativeDay = getRelativeDay(currentDate);
+      if (relativeDay) {
+        inlineTitle.setAttribute('data-day', relativeDay);
+      } else {
+        inlineTitle.removeAttribute('data-day');
+      }
     }
   }
 
@@ -166,6 +184,61 @@ function getDate(offset: number, date?: Date): Date {
   const newDate = new Date(date);
   newDate.setDate(newDate.getDate() + offset);
   return newDate;
+}
+
+function getRelativeDay(date: Date, base?: Date): string | undefined {
+  const today = base ?? new Date();
+  today.setHours(0, 0, 0, 0);
+  const targetDate = new Date(date);
+  targetDate.setHours(0, 0, 0, 0);
+
+  const diffTime = targetDate.getTime() - today.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  // Check for special days
+  if (diffDays === 0) {
+    return '今天';
+  }
+  if (diffDays === -1) {
+    return '昨天';
+  }
+  if (diffDays === -2) {
+    return '前天';
+  }
+  if (diffDays === 1) {
+    return '明天';
+  }
+  if (diffDays === 2) {
+    return '后天';
+  }
+
+  // Get week information
+  const getWeekInfo = (date: Date) => {
+    const day = date.getDay();
+    const monday = new Date(date);
+    // Adjust to Monday (day 1). Sunday is 0, so we need special handling
+    const diff = day === 0 ? -6 : 1 - day;
+    monday.setDate(date.getDate() + diff);
+    monday.setHours(0, 0, 0, 0);
+    return { monday, weekday: day === 0 ? 7 : day };
+  };
+
+  const todayWeek = getWeekInfo(today);
+  const targetWeek = getWeekInfo(targetDate);
+  const weekDiff = Math.round(
+    (targetWeek.monday.getTime() - todayWeek.monday.getTime())
+      / (1000 * 60 * 60 * 24 * 7),
+  );
+  const weekdayNames = ['一', '二', '三', '四', '五', '六', '日'];
+  const weekdayName = weekdayNames[targetWeek.weekday - 1];
+  if (weekDiff === 0) {
+    return `本周${weekdayName}`;
+  }
+  if (weekDiff === -1) {
+    return `上周${weekdayName}`;
+  }
+  if (weekDiff === 1) {
+    return `下周${weekdayName}`;
+  }
 }
 
 function createInsertDateCallback(opts: {
