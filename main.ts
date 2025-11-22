@@ -44,14 +44,25 @@ export default class MyDailyNotes extends Plugin {
     this.addCommand({
       id: 'insert-date-picker',
       name: '插入日期（选择）',
-      editorCallback: (editor: Editor) => {
+      editorCallback: (editor: Editor, view: MarkdownView | MarkdownFileInfo) => {
         const cursor = editor.getCursor();
         const coords = (editor as any).cm.coordsAtPos(editor.posToOffset(cursor));	
         if (!coords) {
           return;
         }
         showDatePickerAtCursor(coords.left, coords.top, new Date(), (date) => {
-          editor.replaceSelection(`[[${date}]]`);
+          const fileDate = dateForView(view);
+          let linkText = '';
+          if (fileDate) {
+            const [year, month, day] = date.split('-').map(s => parseInt(s));
+            const selectedDate = new Date(year, month - 1, day);
+            const relativeDay = getRelativeDay(selectedDate, {
+              base: fileDate,
+              style: 'spoken',
+            });
+            linkText = relativeDay ? `|${relativeDay}` : '';
+          }
+          editor.replaceSelection(`[[${date}${linkText}]]`);
         });
       },
     });
@@ -100,10 +111,8 @@ export default class MyDailyNotes extends Plugin {
       return;
     }
 
-    // Check if this is a daily note (YYYY-MM-DD format)
-    const dateMatch = view.file?.basename.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (!dateMatch) {
-      // Not a daily note, remove data-day attribute if present
+    const currentDate = dateForView(view);
+    if (!currentDate) {
       const inlineTitle = editorEl.querySelector('.inline-title');
       if (inlineTitle) {
         inlineTitle.removeAttribute('data-day');
@@ -111,17 +120,10 @@ export default class MyDailyNotes extends Plugin {
       return;
     }
 
-    const [, year, month, day] = dateMatch;
-    const currentDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-
-    // Create navigation element
     const navElement = this.createNavigationElement(currentDate);
-    
-    // Insert at the top of the editor
     editorEl.insertBefore(navElement, editorEl.firstChild);
     this.navigationElements.set(view, navElement);
 
-    // Update inline title with relative day
     const inlineTitle = editorEl.querySelector('.inline-title');
     if (inlineTitle) {
       const relativeDay = getRelativeDay(currentDate);
@@ -186,8 +188,11 @@ function getDate(offset: number, date?: Date): Date {
   return newDate;
 }
 
-function getRelativeDay(date: Date, base?: Date): string | undefined {
-  const today = base ?? new Date();
+function getRelativeDay(date: Date, opts?: {
+  base?: Date,
+  style?: 'spoken' | 'written',
+}): string | undefined {
+  const today = opts?.base ?? new Date();
   today.setHours(0, 0, 0, 0);
   const targetDate = new Date(date);
   targetDate.setHours(0, 0, 0, 0);
@@ -231,7 +236,11 @@ function getRelativeDay(date: Date, base?: Date): string | undefined {
   const weekdayNames = ['一', '二', '三', '四', '五', '六', '日'];
   const weekdayName = weekdayNames[targetWeek.weekday - 1];
   if (weekDiff === 0) {
-    return `本周${weekdayName}`;
+    if (opts?.style === 'spoken') {
+      return `这周${weekdayName}`;
+    } else {
+      return `本周${weekdayName}`;
+    }
   }
   if (weekDiff === -1) {
     return `上周${weekdayName}`;
@@ -247,29 +256,27 @@ function createInsertDateCallback(opts: {
 }): (editor: Editor, view: MarkdownView | MarkdownFileInfo) => void {
   const { name, offset } = opts;
   return (editor: Editor, view: MarkdownView | MarkdownFileInfo) => {
-    // Check if current file is a daily note
-    const file = view.file;
-    const dateMatch = file?.basename.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    
+    const fileDate = dateForView(view);
     let targetDate: Date;
-    
-    if (dateMatch && offset != null) {
-      // File is a daily note and we have an offset - calculate relative to file's date
-      const [, year, month, day] = dateMatch;
-      const fileDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    if (fileDate && offset != null) {
       targetDate = getDate(offset, fileDate);
     } else if (offset != null) {
-      // File is not a daily note but we have an offset - calculate relative to today
       targetDate = getDate(offset);
     } else {
-      // No offset (today command)
       targetDate = new Date();
     }
-
-    const isDailyNote = !!dateMatch;
     const formattedDate = formatDate(targetDate);
-    const linkText = isDailyNote && name ? `|${name}` : '';
+    const linkText = fileDate && name ? `|${name}` : '';
     editor.replaceSelection(`[[${formattedDate}${linkText}]]`);
+  }
+}
+
+function dateForView(view: MarkdownView | MarkdownFileInfo): Date | undefined {
+  const file = view.file;
+  const dateMatch = file?.basename.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateMatch) {
+    const [, year, month, day] = dateMatch;
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
   }
 }
 
