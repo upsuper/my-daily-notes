@@ -145,6 +145,9 @@ export default class MyDailyNotes extends Plugin {
     prevLink.addClass('my-daily-note-navigation-link');
     prevLink.href = prevDateStr;
     prevLink.textContent = `← ${prevDateStr}`;
+    if (!this.app.metadataCache.getFirstLinkpathDest(prevDateStr, '')) {
+      prevLink.addClass('is-unresolved');
+    }
     prevLink.addEventListener('click', (e) => {
       e.preventDefault();
       this.app.workspace.openLinkText(prevDateStr, '');
@@ -168,6 +171,9 @@ export default class MyDailyNotes extends Plugin {
     nextLink.addClass('my-daily-note-navigation-link');
     nextLink.href = nextDateStr;
     nextLink.textContent = `${nextDateStr} →`;
+    if (!this.app.metadataCache.getFirstLinkpathDest(nextDateStr, '')) {
+      nextLink.addClass('is-unresolved');
+    }
     nextLink.addEventListener('click', (e) => {
       e.preventDefault();
       this.app.workspace.openLinkText(nextDateStr, '');
