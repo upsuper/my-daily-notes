@@ -8,11 +8,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  background: var(--background-secondary);
-  border-radius: 4px;
+  padding-bottom: 4px;
+  margin-bottom: 12px;
+  border-bottom: 1px dashed var(--table-border-color);
   font-size: 0.9em;
+}
+
+.is-mobile .my-daily-note-navigation {
+  margin-bottom: 0;
 }
 
 .my-daily-note-navigation-link {

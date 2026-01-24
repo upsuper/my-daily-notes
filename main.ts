@@ -105,33 +105,26 @@ export default class MyDailyNotes extends Plugin {
       this.navigationElements.delete(view);
     }
 
-    const contentEl = view.contentEl;
-    const editorEl = contentEl.querySelector('.cm-editor');
-    if (!editorEl) {
+    const inlineTitle = view.contentEl.querySelector('.inline-title');
+    if (!inlineTitle) {
       return;
     }
 
     const currentDate = dateForView(view);
     if (!currentDate) {
-      const inlineTitle = editorEl.querySelector('.inline-title');
-      if (inlineTitle) {
-        inlineTitle.removeAttribute('data-day');
-      }
+      inlineTitle.removeAttribute('data-day');
       return;
     }
 
     const navElement = this.createNavigationElement(currentDate);
-    editorEl.insertBefore(navElement, editorEl.firstChild);
+    inlineTitle.before(navElement);
     this.navigationElements.set(view, navElement);
 
-    const inlineTitle = editorEl.querySelector('.inline-title');
-    if (inlineTitle) {
-      const relativeDay = getRelativeDay(currentDate);
-      if (relativeDay) {
-        inlineTitle.setAttribute('data-day', relativeDay);
-      } else {
-        inlineTitle.removeAttribute('data-day');
-      }
+    const relativeDay = getRelativeDay(currentDate);
+    if (relativeDay) {
+      inlineTitle.setAttribute('data-day', relativeDay);
+    } else {
+      inlineTitle.removeAttribute('data-day');
     }
   }
 
