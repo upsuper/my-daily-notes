@@ -5,6 +5,9 @@
 }
 
 .my-daily-note-navigation {
+  position: sticky;
+  top: calc(-1 * var(--file-margins-y));
+  z-index: 9999;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -12,9 +15,11 @@
   margin-bottom: 12px;
   border-bottom: 1px dashed var(--table-border-color);
   font-size: 0.9em;
+  background: var(--background-primary);
 }
 
 .is-mobile .my-daily-note-navigation {
+  position: static;
   margin-bottom: 0;
 }
 
